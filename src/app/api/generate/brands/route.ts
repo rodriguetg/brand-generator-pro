@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import OpenAI from 'openai'
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { multiAIService } from '@/lib/ai-providers'
 
 export async function POST(request: NextRequest) {
   try {
-    const { sector, style } = await request.json()
+    const session = await getServerSession(authOptions)
+    const { sector, style, provider = 'openai' } = await request.json()
     
     if (!sector || !style) {
       return NextResponse.json(
@@ -16,38 +15,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Prompt optimisé pour test
-    const prompt = `Génère 6 noms de marque créatifs et mémorables pour le secteur "${sector}" avec un style "${style}".
+    // Pour les visiteurs, utiliser OpenAI par défaut
+    const aiProvider = session ? provider : 'openai'
 
-Critères:
-- Noms courts (2-3 mots max)
-- Faciles à prononcer
-- Modernes et accrocheurs
-- Adaptés au secteur ${sector}
-- Style ${style}
-
-Format: liste simple, un nom par ligne, sans numérotation.`
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: 200,
-      temperature: 0.8,
-    })
-
-    const content = completion.choices[0]?.message?.content || ''
-    const brands = content
-      .split('\n')
-      .filter(line => line.trim())
-      .map(line => line.replace(/^[-*•]\s*/, '').trim())
-      .filter(brand => brand.length > 0)
-      .slice(0, 6)
+    // Générer les noms de marque
+    const brands = await multiAIService.generateBrandNames(sector, style, aiProvider)
 
     return NextResponse.json({ 
       brands,
       sector,
       style,
-      provider: 'openai'
+      provider: aiProvider,
+      remainingCredits: session ? -1 : 0 // -1 = illimité pour les utilisateurs connectés
     })
     
   } catch (error) {

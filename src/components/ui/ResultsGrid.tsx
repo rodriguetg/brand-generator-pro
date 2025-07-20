@@ -8,7 +8,11 @@ interface ResultsGridProps {
   brands?: string[]
   slogans?: string[]
   onGenerateSlogans?: (brandName: string) => void
+  onSaveProject?: () => void
   loading?: boolean
+  sector?: string
+  style?: string
+  usedProvider?: string
 }
 
 export function ResultsGrid({ brands, slogans, onGenerateSlogans, loading }: ResultsGridProps) {
@@ -21,14 +25,14 @@ export function ResultsGrid({ brands, slogans, onGenerateSlogans, loading }: Res
     }
   }
 
-  if (!brands?.length && !slogans?.length) {
+  if (!brands || brands.length === 0 && (!slogans || slogans.length === 0)) {
     return null
   }
 
   return (
     <div className="space-y-6">
       {/* Noms de marque */}
-      {brands?.length > 0 && (
+      {brands && brands.length > 0 && (
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             Noms de marque générés
@@ -60,7 +64,7 @@ export function ResultsGrid({ brands, slogans, onGenerateSlogans, loading }: Res
       )}
 
       {/* Slogans */}
-      {slogans?.length > 0 && (
+      {slogans && slogans.length > 0 && (
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             Slogans pour "{selectedBrand}"

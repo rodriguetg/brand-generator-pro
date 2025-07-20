@@ -47,7 +47,7 @@ export function ProjectsListClient({ projects: initialProjects }: ProjectsListCl
     return matchesSearch && matchesSector
   })
 
-  const sectors = [...new Set(projects.map(p => p.sector))]
+  const sectors = Array.from(new Set(projects.map(p => p.sector)))
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">

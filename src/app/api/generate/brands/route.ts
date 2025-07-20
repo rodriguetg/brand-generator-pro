@@ -1,70 +1,61 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/db'
-import { aiService } from '@/lib/ai'
-import { z } from 'zod'
+import OpenAI from 'openai'
 
-const generateSchema = z.object({
-  sector: z.string().min(1, 'Le secteur est requis'),
-  style: z.string().min(1, 'Le style est requis')
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
 })
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const { sector, style } = await request.json()
     
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+    if (!sector || !style) {
+      return NextResponse.json(
+        { error: 'Secteur et style requis' },
+        { status: 400 }
+      )
     }
 
-    const body = await request.json()
-    const { sector, style } = generateSchema.parse(body)
+    // Prompt optimisé pour test
+    const prompt = `Génère 6 noms de marque créatifs et mémorables pour le secteur "${sector}" avec un style "${style}".
 
-    // Vérifier les crédits utilisateur
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email }
+Critères:
+- Noms courts (2-3 mots max)
+- Faciles à prononcer
+- Modernes et accrocheurs
+- Adaptés au secteur ${sector}
+- Style ${style}
+
+Format: liste simple, un nom par ligne, sans numérotation.`
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 200,
+      temperature: 0.8,
     })
 
-    if (!user) {
-      return NextResponse.json({ error: 'Utilisateur non trouvé' }, { status: 404 })
-    }
-
-    if (user.plan === 'FREE' && user.credits <= 0) {
-      return NextResponse.json({ 
-        error: 'Crédits insuffisants',
-        code: 'INSUFFICIENT_CREDITS'
-      }, { status: 402 })
-    }
-
-    // Générer les noms de marque
-    const brands = await aiService.generateBrandNames(sector, style)
-
-    // Décrémenter les crédits pour les utilisateurs gratuits
-    if (user.plan === 'FREE') {
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { credits: user.credits - 1 }
-      })
-    }
+    const content = completion.choices[0]?.message?.content || ''
+    const brands = content
+      .split('\n')
+      .filter(line => line.trim())
+      .map(line => line.replace(/^[-*•]\s*/, '').trim())
+      .filter(brand => brand.length > 0)
+      .slice(0, 6)
 
     return NextResponse.json({ 
       brands,
-      remainingCredits: user.plan === 'FREE' ? user.credits - 1 : -1
+      sector,
+      style,
+      provider: 'openai'
     })
-
-  } catch (error) {
-    console.error('Erreur génération marques:', error)
     
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ 
-        error: 'Données invalides',
-        details: error.errors
-      }, { status: 400 })
-    }
-
-    return NextResponse.json({ 
-      error: 'Erreur interne du serveur' 
-    }, { status: 500 })
+  } catch (error) {
+    console.error('Erreur génération:', error)
+    return NextResponse.json(
+      { error: 'Erreur lors de la génération' },
+      { status: 500 }
+    )
   }
 }
+

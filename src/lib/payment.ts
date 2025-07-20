@@ -1,5 +1,6 @@
 import { stripe, STRIPE_PLANS } from './stripe'
 import { prisma } from './db'
+import type Stripe from 'stripe'
 
 export class PaymentService {
   async createCheckoutSession(planId: 'PRO' | 'AGENCY', userId: string, userEmail: string) {

@@ -8,14 +8,16 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  plan      Plan     @default(FREE)
-  credits   Int      @default(3)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  projects  Project[]
+  id                String   @id @default(cuid())
+  email             String   @unique
+  name              String?
+  plan              Plan     @default(FREE)
+  credits           Int      @default(3)
+  stripeCustomerId  String?
+  stripeSubscriptionId String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  projects          Project[]
   
   @@map("users")
 }

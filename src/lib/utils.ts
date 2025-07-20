@@ -5,6 +5,14 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+interface Plan {
+  name: string
+  price: number
+  credits: number
+  features: string[]
+  popular?: boolean
+}
+
 export const SECTORS = [
   { value: 'tech', label: 'Technologie', icon: '💻' },
   { value: 'fashion', label: 'Mode', icon: '👗' },
@@ -27,7 +35,7 @@ export const STYLES = [
   { value: 'eco', label: 'Écologique', description: 'Naturel, durable, responsable' }
 ]
 
-export const PLANS = {
+export const PLANS: Record<string, Plan> = {
   FREE: {
     name: 'Gratuit',
     price: 0,
